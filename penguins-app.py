@@ -1,80 +1,38 @@
 import streamlit as st
 import pandas as pd
+import pickle as pk
 import numpy as np
-import pickle
-from sklearn.ensemble import RandomForestClassifier
-
-st.write("""
-# Penguin Prediction App
-
-This app predicts the **Palmer Penguin** species!
-
-Data obtained from the [palmerpenguins library](https://github.com/allisonhorst/palmerpenguins) in R by Allison Horst.
-""")
-
-st.sidebar.header('User Input Features')
-
-st.sidebar.markdown("""
-[Example CSV input file](https://raw.githubusercontent.com/dataprofessor/data/master/penguins_example.csv)
-""")
-
-# Collects user input features into dataframe
-uploaded_file = st.sidebar.file_uploader("Upload your input CSV file", type=["csv"])
-if uploaded_file is not None:
-    input_df = pd.read_csv(uploaded_file)
-else:
-    def user_input_features():
-        island = st.sidebar.selectbox('Island',('Biscoe','Dream','Torgersen'))
-        sex = st.sidebar.selectbox('Sex',('male','female'))
-        bill_length_mm = st.sidebar.slider('Bill length (mm)', 32.1,59.6,43.9)
-        bill_depth_mm = st.sidebar.slider('Bill depth (mm)', 13.1,21.5,17.2)
-        flipper_length_mm = st.sidebar.slider('Flipper length (mm)', 172.0,231.0,201.0)
-        body_mass_g = st.sidebar.slider('Body mass (g)', 2700.0,6300.0,4207.0)
-        data = {'island': island,
-                'bill_length_mm': bill_length_mm,
-                'bill_depth_mm': bill_depth_mm,
-                'flipper_length_mm': flipper_length_mm,
-                'body_mass_g': body_mass_g,
-                'sex': sex}
-        features = pd.DataFrame(data, index=[0])
-        return features
-    input_df = user_input_features()
-
-# Combines user input features with entire penguins dataset
-# This will be useful for the encoding phase
-penguins_raw = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/penguins_cleaned.csv')
-penguins = penguins_raw.drop(columns=['species'], axis=1)
-df = pd.concat([input_df,penguins],axis=0)
-
-# Encoding of ordinal features
-# https://www.kaggle.com/pratik1120/penguin-dataset-eda-classification-and-clustering
-encode = ['sex','island']
-for col in encode:
-    dummy = pd.get_dummies(df[col], prefix=col)
-    df = pd.concat([df,dummy], axis=1)
-    del df[col]
-df = df[:1] # Selects only the first row (the user input data)
-
-# Displays the user input features
-st.subheader('User Input features')
-
-if uploaded_file is not None:
-    st.write(df)
-else:
-    st.write('Awaiting CSV file to be uploaded. Currently using example input parameters (shown below).')
-    st.write(df)
-
-# Reads in saved classification model
-load_clf = pickle.load(open('penguins_clf.pkl', 'rb'))
-
-# Apply model to make predictions
-prediction = load_clf.predict(df)
-prediction_proba = load_clf.predict_proba(df)
 
 
-st.subheader('Prediction')
-penguins_species = np.array(['Adelie','Chinstrap','Gentoo'])
-st.write(penguins_species[prediction])
+pickle_in = open('model_pickle','rb')
+svc = pk.load(pickle_in)
+def prediction(Pregnancies,Glucose,BloodPressure,SkinThickness,Insulin,BMI,DiabetesPedigreeFunction,Age):
+    prediction = svc.predict([[Pregnancies,Glucose,BloodPressure,SkinThickness,Insulin,BMI,DiabetesPedigreeFunction,Age]])
+    print(prediction)
+    return prediction
 
-st.subheader('Prediction Probability')
-st.write(prediction_proba)
+st.title("Diabetes Symptoms ")
+html_temp = """
+<div style="background-color:orange; padding:10px">
+<h2 style="color:red;text-align:center;">Streamlit Diabetes Predictor </h2>
+</div>
+"""
+st.markdown(html_temp, unsafe_allow_html=True)
+Pregnancies = st.number_input("Pregnancies")
+Glucose = st.number_input("Glucose")
+BloodPressure = st.number_input("BloodPressure")
+SkinThickness = st.number_input("SkinThickness")
+Insulin = st.number_input("Insulin")
+BMI = st.number_input("BMI")
+DiabetesPedigreeFunction = st.number_input("DiabetesPedigreeFunction")
+Age = st.number_input("Age")
+result = ""
+if st.button("Predict"):
+        result = prediction(int(Pregnancies),int(Glucose),int(BloodPressure),int(SkinThickness),int(Insulin),float(BMI),float(DiabetesPedigreeFunction),int(Age))
+        print('result',result[0])
+    if result[0] == 1:
+            result2 = 'patient has diabities'
+            st.success('its seem {} and recommended you to go to your doctor '.format(result2))
+    else:
+            result2 = 'patient does\'nt have diabities'
+            st.error('The output is {}'.format(result2))
